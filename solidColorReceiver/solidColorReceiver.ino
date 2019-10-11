@@ -13,6 +13,8 @@ SoftwareSerial LORA (TX_PIN, RX_PIN);
 SoftwareSerial LCD  (5,4);
 
 int address = 0;
+bool overSwitch = false;
+bool loraSwitch = false;
 bool override = false;
 
 /* Sends a command to the LoRa and returns the response in a buffer */
@@ -120,7 +122,7 @@ void loop() {
   // If there are characters available from the xcvr and the Serial port isn't full,
   // then echo the message to the Serial monitor
 
-  if (LORA.available() > 0 && !override) {
+  if (LORA.available() > 0) {
     //    char rcvd = WLS.read();
     //    Serial.write(rcvd);
     readLora(workingBuffer, BUFLEN);
@@ -133,16 +135,17 @@ void loop() {
       displayLcd(s1);
 
       if(s1[address] == '1'){
-        digitalWrite(13, HIGH);
+        loraSwitch = true;
       }else if (s1[address] == '0'){
-        digitalWrite(13, LOW);
+        loraSwitch = false;
       }
     }
   }
-
-  if(digitalRead(OVERRIDE_PIN) == override){
-    digitalWrite(13, !digitalRead(OVERRIDE_PIN));
-    override = !override;
+  
+  if(digitalRead(OVERRIDE_PIN)){
+    digitalWrite(13, HIGH);
+  }else{
+    digitalWrite(13, loraSwitch);
   }
 
   // If there are characters available from the serial monitor, send them to the xcvr
