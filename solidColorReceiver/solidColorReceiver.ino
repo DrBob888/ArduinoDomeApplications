@@ -3,6 +3,8 @@
 #define TX_PIN 2  //tx pin on LORA
 #define RX_PIN 3  //rx pin on LORA
 
+#define OVERRIDE_PIN 5 //override switch, turns on relay
+
 #define USB Serial
 #define BUFLEN 64
 char workingBuffer[BUFLEN];
@@ -11,6 +13,7 @@ SoftwareSerial LORA (TX_PIN, RX_PIN);
 SoftwareSerial LCD  (5,4);
 
 int address = 0;
+bool override = false;
 
 /* Sends a command to the LoRa and returns the response in a buffer */
 void sendToLora(const char* command, char* response, int buflen) {
@@ -84,6 +87,7 @@ void setup() {
   pinMode(14, INPUT_PULLUP);
   pinMode(15, INPUT_PULLUP);
   pinMode(16, INPUT_PULLUP);
+  pinMode(OVERRIDE_PIN, INPUT_PULLUP);
 
   setAddress();
   LCD.print(" ID=");
@@ -134,7 +138,11 @@ void loop() {
         digitalWrite(13, LOW);
       }
     }
+  }
 
+  if(digitalRead(OVERRIDE_PIN) != override){
+    digitalWrite(13, !digitalRead(OVERRIDE_PIN));
+    override = !override;
   }
 
   // If there are characters available from the serial monitor, send them to the xcvr
