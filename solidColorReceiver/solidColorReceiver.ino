@@ -1,9 +1,8 @@
 #include <SoftwareSerial.h>
 
-#define TX_PIN 2
-#define RX_PIN 3
-//#define LORA Serial1
-//#define LCD Serial2
+#define TX_PIN 2  //tx pin on LORA
+#define RX_PIN 3  //rx pin on LORA
+
 #define USB Serial
 #define BUFLEN 64
 char workingBuffer[BUFLEN];
@@ -11,7 +10,7 @@ char workingBuffer[BUFLEN];
 SoftwareSerial LORA (TX_PIN, RX_PIN);
 SoftwareSerial LCD  (5,4);
 
- int address = 1;
+int address = 0;
 
 /* Sends a command to the LoRa and returns the response in a buffer */
 void sendToLora(const char* command, char* response, int buflen) {
@@ -30,6 +29,16 @@ void displayLcd(char* message) {
   LCD.write(0xFE);  // Control character
   LCD.write(0x01);  // Clear the screen
   LCD.print(message);
+}
+
+void setAddress(){
+  int b1 = digitalRead(A0);
+  int b2 = digitalRead(A1);
+  int b3 = digitalRead(A2);
+  int x = !b1;
+  x = x<<1 | !b2;
+  x = x<<1 | !b3;
+  address = x;
 }
 
 void setup() {
@@ -52,16 +61,36 @@ void setup() {
   while (!LORA) {
     ;
   }
+  LCD.write(0xFE);
+  LCD.write(0x01);
+  
   sendToLora("AT+ADDRESS?", workingBuffer, BUFLEN);
   Serial.println(workingBuffer);
+  LCD.print("A=");
+  LCD.print(workingBuffer+9);
   sendToLora("AT+NETWORKID?", workingBuffer, BUFLEN);
   Serial.println(workingBuffer);
+  LCD.print(" N=");
+  LCD.print(workingBuffer+11);
   sendToLora("AT+PARAMETER=10,7,1,7", workingBuffer, BUFLEN);
   Serial.println(workingBuffer);
   sendToLora("AT+PARAMETER?", workingBuffer, BUFLEN);
   Serial.println(workingBuffer);
+  LCD.print(" P=");
+  LCD.print(workingBuffer+11);
+  
+  
   pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(14, INPUT_PULLUP);
+  pinMode(15, INPUT_PULLUP);
+  pinMode(16, INPUT_PULLUP);
 
+  setAddress();
+  LCD.print(" ID=");
+  LCD.print(address);
+  
+  USB.print("receiver ID: ");
+  USB.println(address);
   /*strcpy(workingBuffer, "+RCV=1,5,HELLO,12,34");
   char *s1 = strtok(workingBuffer, ",");
   if (0 == strncmp(workingBuffer, "+RCV=", 5)) {
