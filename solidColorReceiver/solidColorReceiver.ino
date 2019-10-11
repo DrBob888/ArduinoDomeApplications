@@ -120,7 +120,7 @@ void loop() {
   // If there are characters available from the xcvr and the Serial port isn't full,
   // then echo the message to the Serial monitor
 
-  if (LORA.available() > 0) {
+  if (LORA.available() > 0 && !override) {
     //    char rcvd = WLS.read();
     //    Serial.write(rcvd);
     readLora(workingBuffer, BUFLEN);
@@ -140,7 +140,7 @@ void loop() {
     }
   }
 
-  if(digitalRead(OVERRIDE_PIN) != override){
+  if(digitalRead(OVERRIDE_PIN) == override){
     digitalWrite(13, !digitalRead(OVERRIDE_PIN));
     override = !override;
   }
