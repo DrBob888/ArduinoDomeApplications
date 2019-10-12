@@ -1,3 +1,4 @@
+#include <buttonClass.h>
 #include <FastLED.h>
 
 #define LORA Serial1
@@ -9,15 +10,17 @@
 #define NUM_DOMES 9
 
 const int  domeButtonPin[] =   { 2, 3, 4, 5, 6, 7, 8, 9,10};
+
+button domeButtons[] = {button(2),button(3),button(4),button(5),button(6),button(7),button(8),button(9),button(10)};
 const int  domeButtonLED[] =   {22,23,24,25,26,27,28,29,30};
-const int  effectButtonPin[] = {B_ALL_ON, B_ALL_OFF};
+button  effectButtons[] = {button(B_ALL_ON), button(B_ALL_OFF)};
 const int  effectButtonLED[] = {B_ALL_ON_LED, B_ALL_OFF_LED};
-const int  numButtons = sizeof(domeButtonPin)+sizeof(effectButtonPin);
-long       buttonLastMillis[numButtons];
+const int  numButtons = sizeof(domeButtons)+sizeof(effectButtons);
+//long       buttonLastMillis[numButtons];
 long lastSendMillis = 0;
 bool       domeState[NUM_DOMES];
 
-const int buttonDelay = 120;
+//const int buttonDelay = 120;
 const int sendDelay = 50;
 
 int change = 2;
@@ -30,16 +33,16 @@ void setup() {
   delay(40);
   
   for(int i = 0; i < NUM_DOMES; i++){
-    pinMode(domeButtonPin[i], INPUT_PULLUP);
+    //pinMode(domeButtonPin[i], INPUT_PULLUP);
     pinMode(domeButtonLED[i], OUTPUT);
-    buttonLastMillis[i] = 0;
+    //buttonLastMillis[i] = 0;
     domeState[i] = false;
   }
   
-  for(int i = 0; i < sizeof(effectButtonPin); i++){
-    pinMode(effectButtonPin[i], INPUT_PULLUP);
+  for(int i = 0; i < sizeof(effectButtons); i++){
+    //pinMode(effectButtonPin[i], INPUT_PULLUP);
     pinMode(effectButtonLED[i], OUTPUT);
-    buttonLastMillis[i+NUM_DOMES] = 0;
+    //buttonLastMillis[i+NUM_DOMES] = 0;
   }
 
   //insert ready animation or something
@@ -65,14 +68,14 @@ void loop() {
 void checkButtons(){
   //change = 0;
   for(int i = 0; i < NUM_DOMES; i++){
-    if(digitalRead(domeButtonPin[i]) == LOW && millis() - buttonLastMillis[i] > buttonDelay){
+    if(/*digitalRead(domeButtonPin[i]) == LOW && millis() - buttonLastMillis[i] > buttonDelay*/ domeButtons[i].getState() == 1){
       domeState[i] = !domeState[i];
-      buttonLastMillis[i] = millis();
+      //buttonLastMillis[i] = millis();
       change = 2;
     }
   }
-  for(int i = 0; i < sizeof(effectButtonPin); i++){
-    if(digitalRead(effectButtonPin[i]) == LOW && millis() - buttonLastMillis[i+NUM_DOMES] > buttonDelay){
+  for(int i = 0; i < sizeof(effectButtons); i++){
+    if(/*digitalRead(effectButtonPin[i]) == LOW && millis() - buttonLastMillis[i+NUM_DOMES] > buttonDelay*/ effectButtons[i].getState() == 1){
       if(i == 0){
         for(int i = 0; i < NUM_DOMES; i++){
           domeState[i] = true;
@@ -83,7 +86,7 @@ void checkButtons(){
         }
       }
       change = 2;
-      buttonLastMillis[i+NUM_DOMES] = millis();
+      //buttonLastMillis[i+NUM_DOMES] = millis();
     }
   }
   
