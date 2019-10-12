@@ -98,7 +98,7 @@ void ledUpdate(){
 
 void sendData(){
   String data = "";
-  for(int i = 0; i < 2; i++){
+  for(int i = 0; i < NUM_DOMES; i++){
     if(domeState[i]){
       data += '1';
     }else{
@@ -108,7 +108,9 @@ void sendData(){
 
   //add special effect bits here
 
-  LORA.print("AT+SEND=2,2,");
+  LORA.print("AT+SEND=2,");
+  LORA.print(NUM_DOMES);
+  LORA.print(",");
   LORA.print(data);
   LORA.print("\r\n");
   Serial.println(data);
