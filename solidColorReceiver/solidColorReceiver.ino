@@ -1,7 +1,9 @@
 #include <SoftwareSerial.h>
 
-#define TX_PIN 2  //tx pin on LORA
-#define RX_PIN 3  //rx pin on LORA
+#define LORA_TX_PIN 2  //tx pin on LORA
+#define LORA_RX_PIN 3  //rx pin on LORA
+#define LCD_TX_PIN 5   //tx pin for LCD
+#define LCT_RX_PIN 4   //rx pin for LCD
 
 #define OVERRIDE_PIN 5 //override switch, turns on relay
 
@@ -9,8 +11,12 @@
 #define BUFLEN 64
 char workingBuffer[BUFLEN];
 
-SoftwareSerial LORA (TX_PIN, RX_PIN);
-SoftwareSerial LCD  (5,4);
+
+// Todo: Create a LORA class.  Replace this line with "LORA myLORA(LORA_TX_PIN, LORA_RX_PIN);
+SoftwareSerial LORA (LORA_TX_PIN, LORA_RX_PIN);
+
+// Todo: Create an LCD class.  Replace this line with "LCD myLCD(LCD_TX_PIN, LCD_RX_PIN);
+SoftwareSerial LCD  (LCD_TX_PIN,LCD_RX_PIN);
 
 int address = 0;
 bool overSwitch = false;
@@ -18,6 +24,7 @@ bool loraSwitch = false;
 bool override = false;
 
 /* Sends a command to the LoRa and returns the response in a buffer */
+// Todo: Make this a class method
 void sendToLora(const char* command, char* response, int buflen) {
   LORA.print(command);  // Send command
   LORA.print("\r\n");   // Append terminator
@@ -25,17 +32,21 @@ void sendToLora(const char* command, char* response, int buflen) {
   response[n - 1] = 0; // Replace the last character (\r) with a string terminator
 }
 
+// Todo: make this a class method
 void readLora(char* response, int buflen) {
   int n = LORA.readBytesUntil('\n', response, buflen); // Read the response (terminates in \r\n)
   response[n - 1] = 0; // Replace the last character (\r) with a string terminator
 }
 
+// Todo: make this a class method
 void displayLcd(char* message) {
   LCD.write(0xFE);  // Control character
   LCD.write(0x01);  // Clear the screen
   LCD.print(message);
 }
 
+
+// Todo:  Create an address class
 void setAddress(){
   int b1 = digitalRead(A0);
   int b2 = digitalRead(A1);
@@ -66,8 +77,11 @@ void setup() {
   while (!LORA) {
     ;
   }
+  
+  // Todo: Replace with myLCD.clear();
   LCD.write(0xFE);
   LCD.write(0x01);
+  
   
   sendToLora("AT+ADDRESS?", workingBuffer, BUFLEN);
   Serial.println(workingBuffer);
