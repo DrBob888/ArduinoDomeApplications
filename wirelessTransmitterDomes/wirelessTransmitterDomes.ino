@@ -11,40 +11,29 @@
 
 const int  domeButtonPin[] =   { 2, 3, 4, 5, 6, 7, 8, 9,10};
 
-button domeButtons[] = {button(2),button(3),button(4),button(5),button(6),button(7),button(8),button(9),button(10)};
-const int  domeButtonLED[] =   {22,23,24,25,26,27,28,29,30};
-button  effectButtons[] = {button(B_ALL_ON), button(B_ALL_OFF)};
-const int  effectButtonLED[] = {B_ALL_ON_LED, B_ALL_OFF_LED};
-const int  numButtons = sizeof(domeButtons)+sizeof(effectButtons);
-//long       buttonLastMillis[numButtons];
-long lastSendMillis = 0;
-bool       domeState[NUM_DOMES];
+button domeButtons[] = {button(2, 22),button(3, 23),button(4,24),button(5,25),button(6,26),button(7,27),button(8,28),button(9,29),button(10,30)};
+button  effectButtons[] = {button(B_ALL_ON, B_ALL_ON_LED), button(B_ALL_OFF, B_ALL_OFF_LED)};
+bool domeState[NUM_DOMES];
+bool effectState[sizeof(effectButtons)];
 
-//const int buttonDelay = 120;
+const int  numButtons = sizeof(domeButtons)+sizeof(effectButtons);
+
+long lastSendMillis = 0;
 const int sendDelay = 50;
 
 int change = 2;
 
 void setup() {
   LORA.begin(9600);
-  Serial.begin(9600);
+  //Serial.begin(9600);
   while(!LORA){};
   LORA.print("AT+PARAMETER=10,7,1,7\r\n");
   delay(40);
   
   for(int i = 0; i < NUM_DOMES; i++){
-    //pinMode(domeButtonPin[i], INPUT_PULLUP);
-    pinMode(domeButtonLED[i], OUTPUT);
-    //buttonLastMillis[i] = 0;
     domeState[i] = false;
   }
   
-  for(int i = 0; i < sizeof(effectButtons); i++){
-    //pinMode(effectButtonPin[i], INPUT_PULLUP);
-    pinMode(effectButtonLED[i], OUTPUT);
-    //buttonLastMillis[i+NUM_DOMES] = 0;
-  }
-
   //insert ready animation or something
 }
 
@@ -54,7 +43,7 @@ void loop() {
   if(millis() - lastSendMillis > sendDelay && change > 0){
     lastSendMillis = millis();
     sendData();
-    Serial.println(change);
+    //Serial.println(change);
     change--;
   }
   
@@ -68,34 +57,32 @@ void loop() {
 void checkButtons(){
   //change = 0;
   for(int i = 0; i < NUM_DOMES; i++){
-    if(/*digitalRead(domeButtonPin[i]) == LOW && millis() - buttonLastMillis[i] > buttonDelay*/ domeButtons[i].getState() == 1){
-      domeState[i] = !domeState[i];
-      //buttonLastMillis[i] = millis();
+    if(domeButtons[i].getState() != domeState[i]){
+      domeState[i] = domeButtons[i].getState();
       change = 2;
-    }
-  }
-  for(int i = 0; i < sizeof(effectButtons); i++){
-    if(/*digitalRead(effectButtonPin[i]) == LOW && millis() - buttonLastMillis[i+NUM_DOMES] > buttonDelay*/ effectButtons[i].getState() == 1){
-      if(i == 0){
-        for(int i = 0; i < NUM_DOMES; i++){
-          domeState[i] = true;
-        }
-      }else if (i == 1){
-        for(int i = 0; i < NUM_DOMES; i++){
-          domeState[i] = false;
-        }
-      }
-      change = 2;
-      //buttonLastMillis[i+NUM_DOMES] = millis();
     }
   }
   
-  ledUpdate();
-}
-
-void ledUpdate(){
-  for(int i = 0; i < NUM_DOMES; i++){
-    digitalWrite(domeButtonLED[i], domeState[i]);
+  for(int i = 0; i < sizeof(effectButtons)/sizeof(effectButtons[0]); i++){
+    if(effectButtons[i].getState() != effectState[i]){
+      if(i == 0){
+        effectState[i] = effectButtons[i].getState();
+        //Serial.println(effectState[i]);
+        for(int i = 0; i < NUM_DOMES; i++){
+          domeState[i] = true;
+          domeButtons[i].setState(true);
+        }
+      }else if (i == 1){
+        effectState[i] = effectButtons[i].getState();
+        //Serial.println(effectState[i]);
+        for(int i = 0; i < NUM_DOMES; i++){
+          domeState[i] = false;
+          domeButtons[i].setState(false);
+        }
+      }
+      //Serial.println(i);
+      change = 2;
+    }
   }
 }
 
@@ -116,7 +103,7 @@ void sendData(){
   LORA.print(",");
   LORA.print(data);
   LORA.print("\r\n");
-  Serial.println(data);
+  //Serial.println(data);
   while(LORA.available()){
     LORA.read();
   }
