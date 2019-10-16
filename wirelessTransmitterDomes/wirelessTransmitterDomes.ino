@@ -41,10 +41,11 @@ void setup() {
 Here's the logic that we need to execute in the loop:
 1. Iterate through all effects buttons for a recent action.  If one has been pressed, do the following
   a. Get the button state
-  b. Based on the button state set all of the dome buttons.
+  b. Overwrite the current output string (e.g. 010110102) with the one corresponding to the state of the effect button.
   c. Reset the state for all other effects buttons.
-2. If no effect button has been pressed, then interate through all of the dome buttons
-  a. Set the 
+2. If no effect button has been pressed, then interate through all of the dome buttons. For each button that changed state:
+  a. Set the relevant character in the output string to match
+3. If any button was found to change state, then transmit the character string.
 */
 void loop() {
   checkButtons();
