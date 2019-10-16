@@ -37,6 +37,15 @@ void setup() {
   //insert ready animation or something
 }
 
+/*
+Here's the logic that we need to execute in the loop:
+1. Iterate through all effects buttons for a recent action.  If one has been pressed, do the following
+  a. Get the button state
+  b. Based on the button state set all of the dome buttons.
+  c. Reset the state for all other effects buttons.
+2. If no effect button has been pressed, then interate through all of the dome buttons
+  a. Set the 
+*/
 void loop() {
   checkButtons();
   //sendData();
