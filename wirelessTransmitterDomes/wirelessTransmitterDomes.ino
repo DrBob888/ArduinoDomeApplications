@@ -1,9 +1,12 @@
+
+#define DEBOUNCE_DELAY 30
 #include <buttonClass.h>
 #include <lora.h>
 #include <FastLED.h>
 
 //// Tranceiver variables
-#define SEND_DELAY 50
+#define SEND_DELAY 300
+#define B_PUSH_DELAY 20
 #define NUM_SEND_PER_CHANGE 2
 lora LORA;
 #define BUFLEN 64
@@ -38,6 +41,21 @@ const int pattern_1[EFFECT_1_NUMBER_PATTERNS][NUMBER_DOMES] = {
   {0,0,0,0,1,0,0,0,0}
 };
 
+#define EFFECT_2_NUMBER_PATTERNS 10
+const int pattern_2[EFFECT_2_NUMBER_PATTERNS][NUMBER_DOMES] = {
+// 1 2 3 4 5 6 7 8 9
+  {0,0,0,0,0,0,0,0,0},
+  {1,0,0,0,0,0,0,0,0},
+  {0,1,0,0,0,0,0,0,0},
+  {0,0,1,0,0,0,0,0,0},
+  {0,0,0,1,0,0,0,0,0},
+  {0,0,0,0,1,0,0,0,0},
+  {0,0,0,0,0,1,0,0,0},
+  {0,0,0,0,0,0,1,0,0},
+  {0,0,0,0,0,0,0,1,0},
+  {0,0,0,0,0,0,0,0,1},
+};
+
 //// Button Array
 button buttonArray[] = {
   button(38, 39, 2),                        // Dome 1   0
@@ -52,13 +70,14 @@ button buttonArray[] = {
   button(40, 41, 2),                        // All off  9
   button(42, 43, 2),                        // All on   10
   button(44, 45, EFFECT_1_NUMBER_PATTERNS), // Effect 1 11
-  button(46, 47, 2),                        // Effect 2 12
+  button(46, 47, EFFECT_2_NUMBER_PATTERNS),                        // Effect 2 12
   button(48, 49, 2),                        // Effect 3 13
   button(50, 51, 2)                         // Effect 4 14
 };
 
 //// TX delay variables
 long lastSendMillis = 0;
+long lastButtonMillis = 0;
 int repeatsLeft = 2;
 
 void setup() {
@@ -66,13 +85,20 @@ void setup() {
   delay(100);
   Serial.println("Starting...");
   LORA.send("AT+ADDRESS?", workingBuffer, BUFLEN);
+  LORA.receive(workingBuffer, BUFLEN);
   Serial.println(workingBuffer);
   LORA.send("AT+NETWORKID?", workingBuffer, BUFLEN);
+  LORA.receive(workingBuffer, BUFLEN);
   Serial.println(workingBuffer);
   LORA.send("AT+PARAMETER=10,7,1,7", workingBuffer, BUFLEN);
+  LORA.receive(workingBuffer, BUFLEN);
   Serial.println(workingBuffer);
   LORA.send("AT+PARAMETER?", workingBuffer, BUFLEN);
+  LORA.receive(workingBuffer, BUFLEN);
   Serial.println(workingBuffer);
+  
+  buttonArray[ALL_OFF].setState(true);
+  buttonArray[ALL_ON].setState(true);
   
   //insert ready animation or something
 }
@@ -89,13 +115,17 @@ Here's the logic that we need to execute in the loop:
 */
 void loop() {
   checkButtons();
-  checkButtons();
-  checkButtons();
-  checkButtons();
-  if(millis() - lastSendMillis > SEND_DELAY && repeatsLeft > 0){
+  if(millis() - lastSendMillis > SEND_DELAY && 
+     millis() - lastButtonMillis > B_PUSH_DELAY 
+                            && repeatsLeft > 0 && !LORA.available()){
     lastSendMillis = millis();
     sendData();
     repeatsLeft--;
+    //Serial.println(millis()-lastSendMillis);
+  }
+  if(millis() - lastSendMillis > 320 && LORA.available()){
+    LORA.receive(workingBuffer, BUFLEN);
+    Serial.println(workingBuffer);
   }
 }
 
@@ -104,30 +134,34 @@ void checkButtons(){
   for(int i = ALL_OFF; i <= EFFECT_4; i++){
     if(buttonArray[i].stateChanged()){
       buttonChanged = i;
+      lastButtonMillis = millis();
       break;
     }
   }
   if(buttonChanged != -1){
     repeatsLeft = NUM_SEND_PER_CHANGE;
+    int state = 0;
     switch (buttonChanged){
       case ALL_OFF:
         for(int i = DOME_1; i <= EFFECT_4; i++){
           buttonArray[i].setState(false);
         }
+        buttonArray[ALL_OFF].setState(true);
+        buttonArray[ALL_ON].setState(true);
         break;
         
       case ALL_ON:
-        buttonArray[ALL_ON].setState(false);
+        buttonArray[ALL_ON].setState(true);
         for(int i = DOME_1; i <= DOME_9; i++){
           buttonArray[i].setState(true);
         }
-        for(int i = ALL_OFF; i <= EFFECT_4; i++){
+        for(int i = EFFECT_1; i <= EFFECT_4; i++){
           buttonArray[i].setState(false);
         }
         break;
         
       case EFFECT_1:
-        int state = buttonArray[EFFECT_1].getState();
+        state = buttonArray[EFFECT_1].getState();
         for(int i = DOME_1; i <= DOME_9; i++){
           buttonArray[i].setState(pattern_1[state][i]);
         }
@@ -137,6 +171,13 @@ void checkButtons(){
         break;
         
       case EFFECT_2:
+        state = buttonArray[EFFECT_2].getState();
+        for(int i = DOME_1; i <= DOME_9; i++){
+          buttonArray[i].setState(pattern_2[state][i]);
+        }
+        buttonArray[EFFECT_1].setState(false);
+        buttonArray[EFFECT_3].setState(false);
+        buttonArray[EFFECT_4].setState(false);
         break;
       case EFFECT_3:
         break;
@@ -149,6 +190,7 @@ void checkButtons(){
     for(int i = DOME_1; i <= DOME_9; i++){
       if(buttonArray[i].stateChanged()){
         repeatsLeft = NUM_SEND_PER_CHANGE;
+        lastButtonMillis = millis();
        for(int i = EFFECT_1; i <= EFFECT_4; i++){
           buttonArray[i].setState(false);
        }
@@ -158,14 +200,7 @@ void checkButtons(){
 }
 
 void sendData(){
-  String data = "";
-  for(int i = DOME_1; i <= DOME_9; i++){
-    if(buttonArray[i].getState()){
-      data += '1';
-    }else{
-      data += '0';
-    }
-  }
+  String data = setData();
 
   //add special effect bits here
   String result = "AT+SEND=2,";
@@ -174,5 +209,40 @@ void sendData(){
   result += data;
   LORA.send(result.c_str(), workingBuffer, BUFLEN);
   Serial.println(result);
-  Serial.println(workingBuffer);
+  //Serial.println(workingBuffer);
+}
+
+String setData(){
+  String data = "";
+  for(int i = DOME_1; i <= DOME_3; i++){
+    if(buttonArray[i].getState()){
+      data += '1';
+    }else{
+      data += '0';
+    }
+  }
+  if(buttonArray[DOME_5].getState()){
+    data += '1';
+  }else{
+    data += '0';
+  }
+  for(int i = DOME_7; i <= DOME_9; i++){
+    if(buttonArray[i].getState()){
+      data += '1';
+    }else{
+      data += '0';
+    }
+  }
+
+  if(buttonArray[DOME_4].getState()){
+    data += '1';
+  }else{
+    data += '0';
+  }
+  if(buttonArray[DOME_6].getState()){
+    data += '1';
+  }else{
+    data += '0';
+  }
+  return data;
 }
