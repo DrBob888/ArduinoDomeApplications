@@ -1,5 +1,8 @@
 #include <SoftwareSerial.h>
 
+// Uncomment this line for stress testing
+// #define STRESS_TESTING
+
 #define LORA_TX_PIN 2  //tx pin on LORA
 #define LORA_RX_PIN 3  //rx pin on LORA
 #define LCD_TX_PIN 5   //tx pin for LCD
@@ -130,6 +133,7 @@ void xmitCharacter(char val) {
 }
 
 #define BUFLEN 64
+int lastMessageTime = 0;
 
 void loop() {
   // Handle the serial monitor
@@ -138,23 +142,37 @@ void loop() {
   // then echo the message to the Serial monitor
 
   if (LORA.available() > 0) {
-    //    char rcvd = WLS.read();
-    //    Serial.write(rcvd);
+	lastMessageTime = millis();
     readLora(workingBuffer, BUFLEN);
-    Serial.println(workingBuffer);
+	
+	#ifndef STRESS_TESTING
+		Serial.println(workingBuffer);
+	#else
+		if (0 == strncmp(workingBuffer, "+RCV=",5)) {
+			Serial.print("Corrupted data: ");
+			Serial.print(workingBuffer);
+		}
+	#endif
 
     char *s1 = strtok(workingBuffer, ",");
     if (0 == strncmp(workingBuffer, "+RCV=", 5)) {
       s1 = strtok(NULL, ",");
       s1 = strtok(NULL, ",");
       displayLcd(s1);
+	  
+	  #ifdef STRESS_TESTING
+		if (0 == strncmp(s1,"000000000",9)) {
+			Serial.print("Corrupted token: ");
+			Serial.println(s1);
+		}
+	  #endif
 
       if(s1[address] == '1'){
         loraSwitch = true;
       }else if (s1[address] == '0'){
         loraSwitch = false;
       }
-    }
+    } 
   }
   
   if(digitalRead(OVERRIDE_PIN)){
@@ -176,4 +194,12 @@ void loop() {
     // Send the string the xcvr
     LORA.print(str + "\r\n");
   }
+  #ifdef STRESS_TESTING
+	long int timeSinceLast = millis() - lastMessageTime;
+	if (lastMessageTime > 1200) {
+		timeSinceLast = millis();
+		Serial.print("Timeout: ");
+		Serial.println(timeSinceLast);
+	}
+  #endif
 }
