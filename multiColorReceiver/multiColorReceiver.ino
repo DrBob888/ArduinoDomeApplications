@@ -58,9 +58,9 @@ void displayLcd(char* message) {
 // Todo:  Create an address class
 void setAddress() {
   if (digitalRead(50)) {
-    address = 6;
-  } else {
     address = 7;
+  } else {
+    address = 8;
   }
 }
 
@@ -174,13 +174,13 @@ void loop() {
   // If there are characters available from the serial monitor, send them to the xcvr
   if (Serial.available() > 0) {
     String str = "AT+" + Serial.readString();  // Append the AT command prefix
-  
+
     // Strip the newline character off of the end of the string from the monitor
     str.remove(str.length() - 1, 1);
-  
+
     // Echo the string back to the monitor
     USB.println(str);
-  
+
     // Send the string the xcvr
     LORA.print(str + "\r\n");
   }

@@ -3,7 +3,7 @@
 #define LORA_TX_PIN 2  //tx pin on LORA
 #define LORA_RX_PIN 3  //rx pin on LORA
 #define LCD_TX_PIN 5   //tx pin for LCD
-#define LCT_RX_PIN 4   //rx pin for LCD
+#define LCD_RX_PIN 4   //rx pin for LCD
 
 #define OVERRIDE_PIN 5 //override switch, turns on relay
 
@@ -13,7 +13,8 @@ char workingBuffer[BUFLEN];
 
 
 // Todo: Create a LORA class.  Replace this line with "LORA myLORA(LORA_TX_PIN, LORA_RX_PIN);
-SoftwareSerial LORA (LORA_TX_PIN, LORA_RX_PIN);
+//SoftwareSerial LORA (LORA_TX_PIN, LORA_RX_PIN);
+#define LORA Serial2
 
 // Todo: Create an LCD class.  Replace this line with "LCD myLCD(LCD_TX_PIN, LCD_RX_PIN);
 SoftwareSerial LCD  (LCD_TX_PIN,LCD_RX_PIN);
