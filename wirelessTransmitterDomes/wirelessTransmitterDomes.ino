@@ -84,16 +84,16 @@ void setup() {
   Serial.begin(9600);
   delay(100);
   Serial.println("Starting...");
-  LORA.send("AT+ADDRESS?", workingBuffer, BUFLEN);
+  LORA.send("AT+ADDRESS?");
   LORA.receive(workingBuffer, BUFLEN);
   Serial.println(workingBuffer);
-  LORA.send("AT+NETWORKID?", workingBuffer, BUFLEN);
+  LORA.send("AT+NETWORKID?");
   LORA.receive(workingBuffer, BUFLEN);
   Serial.println(workingBuffer);
-  LORA.send("AT+PARAMETER=10,7,1,7", workingBuffer, BUFLEN);
+  LORA.send("AT+PARAMETER=10,7,1,7");
   LORA.receive(workingBuffer, BUFLEN);
   Serial.println(workingBuffer);
-  LORA.send("AT+PARAMETER?", workingBuffer, BUFLEN);
+  LORA.send("AT+PARAMETER?");
   LORA.receive(workingBuffer, BUFLEN);
   Serial.println(workingBuffer);
   
@@ -207,7 +207,7 @@ void sendData(){
   result += NUMBER_DOMES;
   result += ",";
   result += data;
-  LORA.send(result.c_str(), workingBuffer, BUFLEN);
+  LORA.send(result.c_str());
   Serial.println(result);
   //Serial.println(workingBuffer);
 }
