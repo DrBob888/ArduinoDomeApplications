@@ -16,11 +16,11 @@ char workingBuffer[BUFLEN];
 
 
 // Todo: Create a LORA class.  Replace this line with "LORA myLORA(LORA_TX_PIN, LORA_RX_PIN);
-//SoftwareSerial LORA (LORA_TX_PIN, LORA_RX_PIN);
-#define LORA Serial2
+SoftwareSerial LORA (LORA_TX_PIN, LORA_RX_PIN);
+//#define LORA Serial2
 
 // Todo: Create an LCD class.  Replace this line with "LCD myLCD(LCD_TX_PIN, LCD_RX_PIN);
-SoftwareSerial LCD  (LCD_TX_PIN,LCD_RX_PIN);
+SoftwareSerial LCD  (LCD_TX_PIN, LCD_RX_PIN);
 
 int address = 0;
 bool overSwitch = false;
@@ -51,22 +51,22 @@ void displayLcd(char* message) {
 
 
 // Todo:  Create an address class
-void setAddress(){
+void setAddress() {
   int b1 = digitalRead(A0);
   int b2 = digitalRead(A1);
   int b3 = digitalRead(A2);
   int x = !b1;
-  x = x<<1 | !b2;
-  x = x<<1 | !b3;
+  x = x << 1 | !b2;
+  x = x << 1 | !b3;
   address = x;
 }
 
 void setup() {
   // Start the serial port connected to the computer
   USB.begin(9600);
-//  while (!USB) {
-//    ;
-//  }
+  //  while (!USB) {
+  //    ;
+  //  }
   //USB.println("Initializing");
 
   // Start the LCD display
@@ -81,28 +81,28 @@ void setup() {
   while (!LORA) {
     ;
   }
-  
+
   // Todo: Replace with myLCD.clear();
   LCD.write(0xFE);
   LCD.write(0x01);
-  
-  
+
+
   sendToLora("AT+ADDRESS?", workingBuffer, BUFLEN);
   Serial.println(workingBuffer);
   LCD.print("A=");
-  LCD.print(workingBuffer+9);
+  LCD.print(workingBuffer + 9);
   sendToLora("AT+NETWORKID?", workingBuffer, BUFLEN);
   Serial.println(workingBuffer);
   LCD.print(" N=");
-  LCD.print(workingBuffer+11);
+  LCD.print(workingBuffer + 11);
   sendToLora("AT+PARAMETER=10,7,1,7", workingBuffer, BUFLEN);
   Serial.println(workingBuffer);
   sendToLora("AT+PARAMETER?", workingBuffer, BUFLEN);
   Serial.println(workingBuffer);
   LCD.print(" P=");
-  LCD.print(workingBuffer+11);
-  
-  
+  LCD.print(workingBuffer + 11);
+
+
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(14, INPUT_PULLUP);
   pinMode(15, INPUT_PULLUP);
@@ -112,16 +112,16 @@ void setup() {
   setAddress();
   LCD.print(" ID=");
   LCD.print(address);
-  
+
   USB.print("receiver ID: ");
   USB.println(address);
   /*strcpy(workingBuffer, "+RCV=1,5,HELLO,12,34");
-  char *s1 = strtok(workingBuffer, ",");
-  if (0 == strncmp(workingBuffer, "+RCV=", 5)) {
+    char *s1 = strtok(workingBuffer, ",");
+    if (0 == strncmp(workingBuffer, "+RCV=", 5)) {
     s1 = strtok(NULL, ",");
     s1 = strtok(NULL, ",");
     displayLcd(s1);
-  }*/
+    }*/
 }
 
 bool state = false;
@@ -133,7 +133,7 @@ void xmitCharacter(char val) {
 }
 
 #define BUFLEN 64
-int lastMessageTime = 0;
+long int lastMessageTime = 0;
 
 void loop() {
   // Handle the serial monitor
@@ -142,42 +142,42 @@ void loop() {
   // then echo the message to the Serial monitor
 
   if (LORA.available() > 0) {
-	lastMessageTime = millis();
+    lastMessageTime = millis();
     readLora(workingBuffer, BUFLEN);
-	
-	#ifndef STRESS_TESTING
-		Serial.println(workingBuffer);
-	#else
-		if (0 == strncmp(workingBuffer, "+RCV=",5)) {
-			Serial.print("Corrupted data: ");
-			Serial.print(workingBuffer);
-		}
-	#endif
+
+#ifndef STRESS_TESTING
+    Serial.println(workingBuffer);
+#else
+    if (0 != strncmp(workingBuffer, "+RCV=", 5)) {
+      Serial.print("Corrupted data: ");
+      Serial.print(workingBuffer);
+    }
+#endif
 
     char *s1 = strtok(workingBuffer, ",");
     if (0 == strncmp(workingBuffer, "+RCV=", 5)) {
       s1 = strtok(NULL, ",");
       s1 = strtok(NULL, ",");
       displayLcd(s1);
-	  
-	  #ifdef STRESS_TESTING
-		if (0 == strncmp(s1,"000000000",9)) {
-			Serial.print("Corrupted token: ");
-			Serial.println(s1);
-		}
-	  #endif
 
-      if(s1[address] == '1'){
+#ifdef STRESS_TESTING
+      if (0 != strncmp(s1, "000000000", 9)) {
+        Serial.print("Corrupted token: ");
+        Serial.println(s1);
+      }
+#endif
+
+      if (s1[address] == '1') {
         loraSwitch = true;
-      }else if (s1[address] == '0'){
+      } else if (s1[address] == '0') {
         loraSwitch = false;
       }
-    } 
+    }
   }
-  
-  if(digitalRead(OVERRIDE_PIN)){
+
+  if (digitalRead(OVERRIDE_PIN)) {
     digitalWrite(13, HIGH);
-  }else{
+  } else {
     digitalWrite(13, loraSwitch);
   }
 
@@ -194,12 +194,14 @@ void loop() {
     // Send the string the xcvr
     LORA.print(str + "\r\n");
   }
-  #ifdef STRESS_TESTING
-	long int timeSinceLast = millis() - lastMessageTime;
-	if (lastMessageTime > 1200) {
-		timeSinceLast = millis();
-		Serial.print("Timeout: ");
-		Serial.println(timeSinceLast);
-	}
-  #endif
+#ifdef STRESS_TESTING
+  long int timeSinceLast = millis() - lastMessageTime;
+  if (timeSinceLast > 1500) {
+    lastMessageTime = millis();
+    Serial.print("Timeout: ");
+    Serial.print(lastMessageTime);
+    Serial.print(" ");
+    Serial.println(timeSinceLast);
+  }
+#endif
 }

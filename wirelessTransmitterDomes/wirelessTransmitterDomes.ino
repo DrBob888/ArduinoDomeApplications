@@ -1,3 +1,5 @@
+// Uncomment the following line for stress testing
+// #define STRESS_TESTING
 
 #define DEBOUNCE_DELAY 30
 #include <buttonClass.h>
@@ -33,27 +35,27 @@ char workingBuffer[BUFLEN];
 //// Effect array definitions
 #define EFFECT_1_NUMBER_PATTERNS 5
 const int pattern_1[EFFECT_1_NUMBER_PATTERNS][NUMBER_DOMES] = {
-// 1 2 3 4 5 6 7 8 9
-  {0,0,0,0,0,0,0,0,0},
-  {0,1,0,0,0,0,0,1,0},
-  {1,0,1,0,0,0,1,0,1},
-  {0,0,0,1,0,1,0,0,0},
-  {0,0,0,0,1,0,0,0,0}
+  // 1 2 3 4 5 6 7 8 9
+  {0, 0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 1, 0, 0, 0, 0, 0, 1, 0},
+  {1, 0, 1, 0, 0, 0, 1, 0, 1},
+  {0, 0, 0, 1, 0, 1, 0, 0, 0},
+  {0, 0, 0, 0, 1, 0, 0, 0, 0}
 };
 
 #define EFFECT_2_NUMBER_PATTERNS 10
 const int pattern_2[EFFECT_2_NUMBER_PATTERNS][NUMBER_DOMES] = {
-// 1 2 3 4 5 6 7 8 9
-  {0,0,0,0,0,0,0,0,0},
-  {1,0,0,0,0,0,0,0,0},
-  {0,1,0,0,0,0,0,0,0},
-  {0,0,1,0,0,0,0,0,0},
-  {0,0,0,1,0,0,0,0,0},
-  {0,0,0,0,1,0,0,0,0},
-  {0,0,0,0,0,1,0,0,0},
-  {0,0,0,0,0,0,1,0,0},
-  {0,0,0,0,0,0,0,1,0},
-  {0,0,0,0,0,0,0,0,1},
+  // 1 2 3 4 5 6 7 8 9
+  {0, 0, 0, 0, 0, 0, 0, 0, 0},
+  {1, 0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 1, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 1, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 1, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 1, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 1, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 1, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 1, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0, 1},
 };
 
 //// Button Array
@@ -83,14 +85,12 @@ long lastButtonMillis = 0;
 // Number of sends left to do for the current action
 int repeatsLeft = 2;
 
-// Uncomment the following line for stress testing
-// #define STRESS_TESTING
 
 void setup() {
-  // Set up the serial port to talk to the computer	
+  // Set up the serial port to talk to the computer
   Serial.begin(9600);
   delay(100);
-  
+
   // Configure and read out the LoRa
   Serial.println("Starting...");
   LORA.send("AT+ADDRESS?");
@@ -105,25 +105,25 @@ void setup() {
   LORA.send("AT+PARAMETER?");
   LORA.receive(workingBuffer, BUFLEN);
   Serial.println(workingBuffer);
-  
+
   // Turn on "All On" and "All off" buttons.  Note that "All off" has priority.
   buttonArray[ALL_OFF].setState(true);
   buttonArray[ALL_ON].setState(true);
-  
+
   //insert ready animation or something
 }
 
 void loop() {
-  // Check the button status	
+  // Check the button status
   checkButtons();
-  
+
   // We send out a message if the following conditions apply
   // 	1. It is more than a SEND_DELAY since the last message.
   //	2. It is more than a B_PUSH_DELAY since the last button push (to allow for mutliple buttons to be pushed "at once"
   //	3. We still have message left to send.  (Not sure why we check to see if Lora is not available).
-  if(millis() - lastSendMillis > SEND_DELAY && 
-     millis() - lastButtonMillis > B_PUSH_DELAY 
-                            && repeatsLeft > 0 && !LORA.available()){
+  if (millis() - lastSendMillis > SEND_DELAY &&
+      millis() - lastButtonMillis > B_PUSH_DELAY
+      && repeatsLeft > 0 && !LORA.available()) {
     lastSendMillis = millis();
     sendData();		// Send the message
     repeatsLeft--;	// We need to send one fewer messages.
@@ -131,85 +131,85 @@ void loop() {
   }
   // Not sure what is going on here.  If it is 320 ms since the last message, and the LoRa is available,
   // then we receive the message?  Need to ask Tim.
-  if(millis() - lastSendMillis > 320 && LORA.available()){
+  if (millis() - lastSendMillis > 320 && LORA.available()) {
     LORA.receive(workingBuffer, BUFLEN);
     Serial.println(workingBuffer);
   }
-  
+
   // Place stress test code here.  If millis() - lastSendMillis, then
   // set repeatsLeft to 1 and reset lastSendMillis.  The effect is we
   // will transmit the last state every second.
-  
+
   // Uncomment this code for stress testing
-  #ifdef STRESS_TESTING
+#ifdef STRESS_TESTING
   if (millis() - lastSendMillis > 1000) {
-	  repeatsLeft = 1;
-	  lastSendMillis = millis();
+    repeatsLeft = 1;
+    lastSendMillis = millis();
   }
-  #endif
-  
-  
+#endif
+
+
 }
 
-void checkButtons(){
-  // -1 means no buttons have changed.  >= 0 means the button with that value has changed.	
+void checkButtons() {
+  // -1 means no buttons have changed.  >= 0 means the button with that value has changed.
   int buttonChanged = -1;
-  
+
   // First check all of the effects buttons.  Note we break when we find one with a state change.
   // all other buttons get ignored.  Hence the prioritization order is "All on", "All off", "Effect 1", etc.
-  for(int i = ALL_OFF; i <= EFFECT_4; i++){
-    if(buttonArray[i].stateChanged()){
+  for (int i = ALL_OFF; i <= EFFECT_4; i++) {
+    if (buttonArray[i].stateChanged()) {
       buttonChanged = i;
-	  // A button was pushed, record the time.
+      // A button was pushed, record the time.
       lastButtonMillis = millis();
       break;
     }
   }
-  
+
   // At least one button changed, get ready to send a message.  Note the message
-  // won't go out for about 20 ms.  This is to allow multiple buttons to be 
+  // won't go out for about 20 ms.  This is to allow multiple buttons to be
   // pressed "simultaneously".
-  if(buttonChanged != -1){
+  if (buttonChanged != -1) {
     repeatsLeft = NUM_SEND_PER_CHANGE;
     int state = 0;
-	
-	// Take action based on what button changed.
-    switch (buttonChanged){
-		
-	  // Turn all buttons off, then turn on the "all on"
-	  // and "all off" LEDs.
+
+    // Take action based on what button changed.
+    switch (buttonChanged) {
+
+      // Turn all buttons off, then turn on the "all on"
+      // and "all off" LEDs.
       case ALL_OFF:
-        for(int i = DOME_1; i <= EFFECT_4; i++){
+        for (int i = DOME_1; i <= EFFECT_4; i++) {
           buttonArray[i].setState(false);
         }
         buttonArray[ALL_OFF].setState(true);
         buttonArray[ALL_ON].setState(true);
         break;
-	  
-	  // Turn all dome buttons on, turn effects buttons off.
+
+      // Turn all dome buttons on, turn effects buttons off.
       case ALL_ON:
         buttonArray[ALL_ON].setState(true);
-        for(int i = DOME_1; i <= DOME_9; i++){
+        for (int i = DOME_1; i <= DOME_9; i++) {
           buttonArray[i].setState(true);
         }
-        for(int i = EFFECT_1; i <= EFFECT_4; i++){
+        for (int i = EFFECT_1; i <= EFFECT_4; i++) {
           buttonArray[i].setState(false);
         }
         break;
-        
+
       case EFFECT_1:
         state = buttonArray[EFFECT_1].getState();
-        for(int i = DOME_1; i <= DOME_9; i++){
+        for (int i = DOME_1; i <= DOME_9; i++) {
           buttonArray[i].setState(pattern_1[state][i]);
         }
-        for(int i = EFFECT_2; i <= EFFECT_4; i++){
+        for (int i = EFFECT_2; i <= EFFECT_4; i++) {
           buttonArray[i].setState(false);
         }
         break;
-        
+
       case EFFECT_2:
         state = buttonArray[EFFECT_2].getState();
-        for(int i = DOME_1; i <= DOME_9; i++){
+        for (int i = DOME_1; i <= DOME_9; i++) {
           buttonArray[i].setState(pattern_2[state][i]);
         }
         buttonArray[EFFECT_1].setState(false);
@@ -223,20 +223,20 @@ void checkButtons(){
       default:
         Serial.println("bruH");
     }
-  }else{
-    for(int i = DOME_1; i <= DOME_9; i++){
-      if(buttonArray[i].stateChanged()){
+  } else {
+    for (int i = DOME_1; i <= DOME_9; i++) {
+      if (buttonArray[i].stateChanged()) {
         repeatsLeft = NUM_SEND_PER_CHANGE;
         lastButtonMillis = millis();
-       for(int i = EFFECT_1; i <= EFFECT_4; i++){
+        for (int i = EFFECT_1; i <= EFFECT_4; i++) {
           buttonArray[i].setState(false);
-       }
+        }
       }
     }
   }
 }
 
-void sendData(){
+void sendData() {
   String data = setData();
 
   //add special effect bits here
@@ -249,36 +249,36 @@ void sendData(){
   //Serial.println(workingBuffer);
 }
 
-String setData(){
+String setData() {
   String data = "";
-  for(int i = DOME_1; i <= DOME_3; i++){
-    if(buttonArray[i].getState()){
+  for (int i = DOME_1; i <= DOME_3; i++) {
+    if (buttonArray[i].getState()) {
       data += '1';
-    }else{
+    } else {
       data += '0';
     }
   }
-  if(buttonArray[DOME_5].getState()){
+  if (buttonArray[DOME_5].getState()) {
     data += '1';
-  }else{
+  } else {
     data += '0';
   }
-  for(int i = DOME_7; i <= DOME_9; i++){
-    if(buttonArray[i].getState()){
+  for (int i = DOME_7; i <= DOME_9; i++) {
+    if (buttonArray[i].getState()) {
       data += '1';
-    }else{
+    } else {
       data += '0';
     }
   }
 
-  if(buttonArray[DOME_4].getState()){
+  if (buttonArray[DOME_4].getState()) {
     data += '1';
-  }else{
+  } else {
     data += '0';
   }
-  if(buttonArray[DOME_6].getState()){
+  if (buttonArray[DOME_6].getState()) {
     data += '1';
-  }else{
+  } else {
     data += '0';
   }
   return data;
