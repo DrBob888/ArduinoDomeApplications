@@ -19,6 +19,9 @@ char workingBuffer[BUFLEN];
 
 CRGB leds[NUM_LEDS];
 
+const CRGB COLOR1 = CRGB::Cyan;
+const CRGB COLOR2 = CRGB::Yellow;
+
 // Todo: Create a LORA class.  Replace this line with "LORA myLORA(LORA_TX_PIN, LORA_RX_PIN);
 //SoftwareSerial LORA (LORA_TX_PIN, LORA_RX_PIN);
 #define LORA Serial1
@@ -28,9 +31,10 @@ SoftwareSerial LCD  (LCD_TX_PIN, LCD_RX_PIN);
 
 int address = 0;
 bool overSwitch = false;
-bool loraSwitch = false;
+int loraState = 0;
 bool override = false;
 int hue = 0;
+CRGB solidColor = CRGB(0,0,0);
 
 /* Sends a command to the LoRa and returns the response in a buffer */
 // Todo: Make this a class method
@@ -59,8 +63,10 @@ void displayLcd(char* message) {
 void setAddress() {
   if (digitalRead(50)) {
     address = 7;
+    solidColor = COLOR1;
   } else {
     address = 8;
+    solidColor = COLOR2;
   }
 }
 
@@ -149,10 +155,18 @@ void loop() {
       s1 = strtok(NULL, ",");
       displayLcd(s1);
 
-      if (s1[address] == '1') {
-        loraSwitch = true;
-      } else if (s1[address] == '0') {
-        loraSwitch = false;
+      switch(s1[address]){
+        case '0':
+          loraState = 0;
+          break;
+        case '1':
+          loraState = 1;
+          break;
+        case '2':
+          loraState = 2;
+          break;
+        default:
+          Serial.println("bad data");
       }
     }
   }
@@ -161,13 +175,21 @@ void loop() {
     fill_solid(leds, NUM_LEDS, CHSV(hue,255,255));
     digitalWrite(13, HIGH);
   }else{
-    if(loraSwitch){
-      //fill_rainbow(leds, NUM_LEDS, hue);
-      fill_solid(leds, NUM_LEDS, CHSV(hue, 255, 255));
-      digitalWrite(13, HIGH);
-    }else{
-      FastLED.clear();
-      digitalWrite(13, LOW);
+    switch(loraState){
+      case 0:
+        FastLED.clear();\
+        digitalWrite(13,LOW);
+        break;
+      case 1:
+        fill_solid(leds, NUM_LEDS, solidColor);
+        digitalWrite(13,HIGH);
+        break;
+      case 2:
+        fill_solid(leds, NUM_LEDS, CHSV(hue,255,255));
+        digitalWrite(13,HIGH);
+        break;
+      default:
+        Serial.println("bad state");
     }
   }
   
