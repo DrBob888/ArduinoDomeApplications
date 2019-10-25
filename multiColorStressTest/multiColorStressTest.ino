@@ -1,23 +1,27 @@
 #include <SoftwareSerial.h>
 
-// Uncomment this line for stress testing
-// #define STRESS_TESTING
+#define FASTLED_ALLOW_INTERRUPTS 0
+#include <FastLED.h>
 
-#define LORA_TX_PIN 2  //tx pin on LORA
-#define LORA_RX_PIN 3  //rx pin on LORA
-#define LCD_TX_PIN 5   //tx pin for LCD
-#define LCD_RX_PIN 4   //rx pin for LCD
+#define LORA_TX_PIN 10   //tx pin on LORA
+#define LORA_RX_PIN 9   //rx pin on LORA
+#define LCD_TX_PIN  5   //tx pin for LCD
+#define LCD_RX_PIN  6   //rx pin for LCD
 
-#define OVERRIDE_PIN 5 //override switch, turns on relay
+#define LED_PIN     11   //digital pin for LEDs
+#define NUM_LEDS    300  //maximum number of LEDs inside of strip
+
+#define OVERRIDE_PIN 12 //override switch, turns on relay
 
 #define USB Serial
 #define BUFLEN 64
 char workingBuffer[BUFLEN];
 
+CRGB leds[NUM_LEDS];
 
 // Todo: Create a LORA class.  Replace this line with "LORA myLORA(LORA_TX_PIN, LORA_RX_PIN);
-SoftwareSerial LORA (LORA_TX_PIN, LORA_RX_PIN);
-//#define LORA Serial2
+//SoftwareSerial LORA (LORA_TX_PIN, LORA_RX_PIN);
+#define LORA Serial1
 
 // Todo: Create an LCD class.  Replace this line with "LCD myLCD(LCD_TX_PIN, LCD_RX_PIN);
 SoftwareSerial LCD  (LCD_TX_PIN, LCD_RX_PIN);
@@ -26,6 +30,7 @@ int address = 0;
 bool overSwitch = false;
 bool loraSwitch = false;
 bool override = false;
+int hue = 0;
 
 /* Sends a command to the LoRa and returns the response in a buffer */
 // Todo: Make this a class method
@@ -52,13 +57,11 @@ void displayLcd(char* message) {
 
 // Todo:  Create an address class
 void setAddress() {
-  int b1 = digitalRead(A0);
-  int b2 = digitalRead(A1);
-  int b3 = digitalRead(A2);
-  int x = !b1;
-  x = x << 1 | !b2;
-  x = x << 1 | !b3;
-  address = x;
+  if (digitalRead(50)) {
+    address = 7;
+  } else {
+    address = 8;
+  }
 }
 
 void setup() {
@@ -70,7 +73,7 @@ void setup() {
   //USB.println("Initializing");
 
   // Start the LCD display
-  delay(500); // Wait for LCD to be ready
+  delay(750); // Wait for LCD to be ready
   LCD.begin(9600);
   while (!LCD) {
     ;
@@ -104,10 +107,13 @@ void setup() {
 
 
   pinMode(LED_BUILTIN, OUTPUT);
-  pinMode(14, INPUT_PULLUP);
-  pinMode(15, INPUT_PULLUP);
-  pinMode(16, INPUT_PULLUP);
+  pinMode(50, INPUT_PULLUP);
   pinMode(OVERRIDE_PIN, INPUT_PULLUP);
+  //pinMode(LED_PIN, OUTPUT);
+
+  FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
+  FastLED.clear();
+  FastLED.show();
 
   setAddress();
   LCD.print(" ID=");
@@ -115,13 +121,6 @@ void setup() {
 
   USB.print("receiver ID: ");
   USB.println(address);
-  /*strcpy(workingBuffer, "+RCV=1,5,HELLO,12,34");
-    char *s1 = strtok(workingBuffer, ",");
-    if (0 == strncmp(workingBuffer, "+RCV=", 5)) {
-    s1 = strtok(NULL, ",");
-    s1 = strtok(NULL, ",");
-    displayLcd(s1);
-    }*/
 }
 
 bool state = false;
@@ -132,9 +131,6 @@ void xmitCharacter(char val) {
   LORA.print(str + val + "\r\n");
 }
 
-#define BUFLEN 64
-long int lastMessageTime = 0;
-
 void loop() {
   // Handle the serial monitor
 
@@ -142,30 +138,16 @@ void loop() {
   // then echo the message to the Serial monitor
 
   if (LORA.available() > 0) {
-    lastMessageTime = millis();
+    //    char rcvd = WLS.read();
+    //    Serial.write(rcvd);
     readLora(workingBuffer, BUFLEN);
-
-#ifndef STRESS_TESTING
     Serial.println(workingBuffer);
-#else
-    if (0 != strncmp(workingBuffer, "+RCV=", 5)) {
-      Serial.print("Corrupted data: ");
-      Serial.print(workingBuffer);
-    }
-#endif
 
     char *s1 = strtok(workingBuffer, ",");
-    if (0 == strncmp(workingBuffer, "+RCV=", 5)) {
+    if (0 == strncmp(workingBuffer, "+R", 2)) {
       s1 = strtok(NULL, ",");
       s1 = strtok(NULL, ",");
       displayLcd(s1);
-
-#ifdef STRESS_TESTING
-      if (0 != strncmp(s1, "000000000", 9)) {
-        Serial.print("Corrupted token: ");
-        Serial.println(s1);
-      }
-#endif
 
       if (s1[address] == '1') {
         loraSwitch = true;
@@ -176,11 +158,19 @@ void loop() {
   }
 
   if (digitalRead(OVERRIDE_PIN)) {
+    fill_solid(leds, NUM_LEDS, CHSV(hue,255,255));
     digitalWrite(13, HIGH);
-  } else {
-    digitalWrite(13, loraSwitch);
+  }else{
+    if(loraSwitch){
+      //fill_rainbow(leds, NUM_LEDS, hue);
+      fill_solid(leds, NUM_LEDS, CHSV(hue, 255, 255));
+      digitalWrite(13, HIGH);
+    }else{
+      FastLED.clear();
+      digitalWrite(13, LOW);
+    }
   }
-
+  
   // If there are characters available from the serial monitor, send them to the xcvr
   if (Serial.available() > 0) {
     String str = "AT+" + Serial.readString();  // Append the AT command prefix
@@ -194,14 +184,13 @@ void loop() {
     // Send the string the xcvr
     LORA.print(str + "\r\n");
   }
-#ifdef STRESS_TESTING
-  long int timeSinceLast = millis() - lastMessageTime;
-  if (timeSinceLast > 1500) {
-    lastMessageTime = millis();
-    Serial.print("Timeout: ");
-    Serial.print(lastMessageTime);
-    Serial.print(" ");
-    Serial.println(timeSinceLast);
+  
+  //delay(100);
+  //hue++;
+  
+  
+  EVERY_N_MILLISECONDS(20){
+    hue+=2;
+    FastLED.show();
   }
-#endif
 }
