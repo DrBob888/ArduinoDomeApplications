@@ -62,7 +62,7 @@ const int pattern_3[EFFECT_3_NUMBER_PATTERNS][NUMBER_DOMES] = {
 #define EFFECT_4_NUMBER_PATTERNS 2
 const int pattern_4[EFFECT_4_NUMBER_PATTERNS][NUMBER_DOMES] = {
   {0,0,0,0,0,0,0,0,0},
-  {1,1,1,2,1,2,1,1,1}
+  {1,1,1,-1,1,-1,1,1,1}
 };
 
 
@@ -209,7 +209,9 @@ void checkButtons() {
       case EFFECT_1:
         state = buttonArray[EFFECT_1].getState();
         for (int i = DOME_1; i <= DOME_9; i++) {
-          buttonArray[i].setState(pattern_1[state][i]);
+          if(pattern_1[state][i] != -1){
+            buttonArray[i].setState(pattern_1[state][i]);
+          }
         }
         for (int i = EFFECT_2; i <= EFFECT_4; i++) {
           buttonArray[i].setState(false);
@@ -219,7 +221,9 @@ void checkButtons() {
       case EFFECT_2:
         state = buttonArray[EFFECT_2].getState();
         for (int i = DOME_1; i <= DOME_9; i++) {
-          buttonArray[i].setState(pattern_2[state][i]);
+          if(pattern_2[state][i] != -1){
+            buttonArray[i].setState(pattern_2[state][i]);
+          }
         }
         buttonArray[EFFECT_1].setState(false);
         buttonArray[EFFECT_3].setState(false);
@@ -228,7 +232,9 @@ void checkButtons() {
       case EFFECT_3:
         state = buttonArray[EFFECT_3].getState();
         for(int i = DOME_1; i <= DOME_9; i++){
-          buttonArray[i].setState(pattern_3[state][i]);
+          if(pattern_3[state][i] != -1){
+            buttonArray[i].setState(pattern_3[state][i]);
+          }
         }
         buttonArray[EFFECT_1].setState(false);
         buttonArray[EFFECT_2].setState(false);
@@ -237,7 +243,9 @@ void checkButtons() {
       case EFFECT_4:
         state = buttonArray[EFFECT_4].getState();
         for(int i = DOME_1; i <= DOME_9; i++){
-          buttonArray[i].setState(pattern_4[state][i]);
+          if(pattern_4[state][i] != -1){
+            buttonArray[i].setState(pattern_4[state][i]);
+          }
         }
         buttonArray[EFFECT_1].setState(false);
         buttonArray[EFFECT_2].setState(false);
