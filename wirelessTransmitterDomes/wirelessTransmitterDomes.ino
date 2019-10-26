@@ -1,14 +1,16 @@
 // Uncomment the following line for stress testing
 // #define STRESS_TESTING
 
+//button debounce delay (needs to be defined before buttonClass is imported)
 #define DEBOUNCE_DELAY 30
+//delay before transmitting, allows for multiple buttons to be pressed
+#define B_PUSH_DELAY 20
 #include <buttonClass.h>
 #include <lora.h>
 #include <FastLED.h>
 
 //// Tranceiver variables
 #define SEND_DELAY 300
-#define B_PUSH_DELAY 20
 #define NUM_SEND_PER_CHANGE 2
 lora LORA;
 #define BUFLEN 64
@@ -95,6 +97,7 @@ long lastButtonMillis = 0;
 int repeatsLeft = 2;
 
 
+////////////////////////// SETUP ///////////////////////////////
 void setup() {
   // Set up the serial port to talk to the computer
   Serial.begin(9600);
@@ -118,12 +121,11 @@ void setup() {
   // Turn on "All On" and "All off" buttons.  Note that "All off" has priority.
   buttonArray[ALL_OFF].setState(true);
   buttonArray[ALL_ON].setState(true);
-
-  //insert ready animation or something
 }
 
+//////////////////////// LOOP /////////////////////////////
 void loop() {
-  // Check the button status
+  // Check the button status & update dome states accordingly
   checkButtons();
 
   // We send out a message if the following conditions apply
@@ -136,30 +138,26 @@ void loop() {
     lastSendMillis = millis();
     sendData();		// Send the message
     repeatsLeft--;	// We need to send one fewer messages.
-    //Serial.println(millis()-lastSendMillis);
   }
-  // Not sure what is going on here.  If it is 320 ms since the last message, and the LoRa is available,
-  // then we receive the message?  Need to ask Tim.
+  
+  // Delay reading confirmation message until after LORA sends it
+  // Allows for button presses / state updates while LORA is still sending
+  // last state.
   if (millis() - lastSendMillis > 320 && LORA.available()) {
     LORA.receive(workingBuffer, BUFLEN);
     Serial.println(workingBuffer);
   }
 
-  // Place stress test code here.  If millis() - lastSendMillis, then
-  // set repeatsLeft to 1 and reset lastSendMillis.  The effect is we
-  // will transmit the last state every second.
-
-  // Uncomment this code for stress testing
-#ifdef STRESS_TESTING
-  if (millis() - lastSendMillis > 1000) {
-    repeatsLeft = 1;
-    lastSendMillis = millis();
-  }
-#endif
-
-
+  //stress testing code, enabled above in definition
+  #ifdef STRESS_TESTING
+    if (millis() - lastSendMillis > 1000) {
+      repeatsLeft = 1;
+      lastSendMillis = millis();
+    }
+  #endif
 }
 
+//////////////////////// checkButtons /////////////////////
 void checkButtons() {
   // -1 means no buttons have changed.  >= 0 means the button with that value has changed.
   int buttonChanged = -1;
@@ -206,18 +204,22 @@ void checkButtons() {
         }
         break;
 
+      //Relay state from each stored pattern into the domes
       case EFFECT_1:
         state = buttonArray[EFFECT_1].getState();
         for (int i = DOME_1; i <= DOME_9; i++) {
+          //check for null character '-1' (if we don't want the state to be overwritten)
           if(pattern_1[state][i] != -1){
             buttonArray[i].setState(pattern_1[state][i]);
           }
         }
+        //turn off the other effect buttons
         for (int i = EFFECT_2; i <= EFFECT_4; i++) {
           buttonArray[i].setState(false);
         }
         break;
 
+      //same as above
       case EFFECT_2:
         state = buttonArray[EFFECT_2].getState();
         for (int i = DOME_1; i <= DOME_9; i++) {
@@ -251,14 +253,20 @@ void checkButtons() {
         buttonArray[EFFECT_2].setState(false);
         buttonArray[EFFECT_3].setState(false);
         break;
+
+      //default output, should never happen but useful for debugging
       default:
-        Serial.println("bruH");
+        Serial.println("bad button ID");
     }
   } else {
+
+    //if no special buttons are pressed, then check each regular dome button
+    //if they're pressed, then toggle the state to reflect button press.
     for (int i = DOME_1; i <= DOME_9; i++) {
       if (buttonArray[i].stateChanged()) {
         repeatsLeft = NUM_SEND_PER_CHANGE;
         lastButtonMillis = millis();
+        //turn off all effect buttons
         for (int i = EFFECT_1; i <= EFFECT_4; i++) {
           buttonArray[i].setState(false);
         }
@@ -267,19 +275,24 @@ void checkButtons() {
   }
 }
 
-void sendData() {
-  String data = setData();
 
-  //add special effect bits here
+///used to compile and send data to tranceiver
+void sendData() {
+  //get data from button states
+  String data = setData();
+  //add header
   String result = "AT+SEND=2,";
+  //add data
   result += NUMBER_DOMES;
   result += ",";
   result += data;
+  //send data as a char array
   LORA.send(result.c_str());
+  //relay to serial monitor for debugging
   Serial.println(result);
-  //Serial.println(workingBuffer);
 }
 
+///get data string from dome button states
 String setData() {
   String data = "";
   for (int i = DOME_1; i <= DOME_3; i++) {
