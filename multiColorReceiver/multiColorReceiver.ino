@@ -34,7 +34,7 @@ bool overSwitch = false;
 int loraState = 0;
 bool override = false;
 int hue = 0;
-CRGB solidColor = CRGB(0, 0, 0);
+CRGB solidColor = CRGB(0,0,0);
 
 /* Sends a command to the LoRa and returns the response in a buffer */
 // Todo: Make this a class method
@@ -137,9 +137,6 @@ void xmitCharacter(char val) {
   LORA.print(str + val + "\r\n");
 }
 
-// Number of times to write to the LEDs (-1 = infinity)
-int nTries = 0;
-
 void loop() {
   // Handle the serial monitor
 
@@ -158,18 +155,15 @@ void loop() {
       s1 = strtok(NULL, ",");
       displayLcd(s1);
 
-      switch (s1[address]) {
+      switch(s1[address]){
         case '0':
           loraState = 0;
-          nTries = 3;
           break;
         case '1':
           loraState = 1;
-          nTries = 3;
           break;
         case '2':
           loraState = 2;
-          nTries = -1;
           break;
         default:
           Serial.println("bad data");
@@ -177,7 +171,28 @@ void loop() {
     }
   }
 
-
+  if (digitalRead(OVERRIDE_PIN)) {
+    fill_solid(leds, NUM_LEDS, CHSV(hue,255,255));
+    digitalWrite(13, HIGH);
+  }else{
+    switch(loraState){
+      case 0:
+        FastLED.clear();\
+        digitalWrite(13,LOW);
+        break;
+      case 1:
+        fill_solid(leds, NUM_LEDS, solidColor);
+        digitalWrite(13,HIGH);
+        break;
+      case 2:
+        fill_solid(leds, NUM_LEDS, CHSV(hue,255,255));
+        digitalWrite(13,HIGH);
+        break;
+      default:
+        Serial.println("bad state");
+    }
+  }
+  
   // If there are characters available from the serial monitor, send them to the xcvr
   if (Serial.available() > 0) {
     String str = "AT+" + Serial.readString();  // Append the AT command prefix
@@ -191,41 +206,13 @@ void loop() {
     // Send the string the xcvr
     LORA.print(str + "\r\n");
   }
-
+  
   //delay(100);
   //hue++;
-
-
-  EVERY_N_MILLISECONDS(20) {
-    if (digitalRead(OVERRIDE_PIN)) {
-      fill_solid(leds, NUM_LEDS, CHSV(hue, 255, 255));
-      digitalWrite(13, HIGH);
-      nTries = -1;
-    } else {
-      switch (loraState) {
-        case 0:
-          FastLED.clear(); \
-          digitalWrite(13, LOW);
-          break;
-        case 1:
-          fill_solid(leds, NUM_LEDS, solidColor);
-          digitalWrite(13, HIGH);
-          break;
-        case 2:
-          fill_solid(leds, NUM_LEDS, CHSV(hue, 255, 255));
-          digitalWrite(13, HIGH);
-          break;
-        default:
-          Serial.println("bad state");
-      }
-    }
-
-    hue += 2;
-    if (nTries < 0) {
-      FastLED.show();
-    } else if (nTries > 0) {
-      FastLED.show();
-      nTries--;
-    }
+  
+  
+  EVERY_N_MILLISECONDS(20){
+    hue+=2;
+    FastLED.show();
   }
 }
